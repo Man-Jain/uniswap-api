@@ -35,15 +35,18 @@ app.post("/swap", async function (req, res) {
   const data = req.body;
   const amount = new BigNumber(data.amount1).multipliedBy(10).pow(18);
   console.log("amount", amount);
+  // Get the pair address for two tokens
   const pairAddress = await factoryRouter.methods
     .getPair(data.address1, data.address2)
     .call();
 
   console.log(pairAddress, "pairAddress");
   let path;
+  // Check whether the pair exists
   if (pairAddress !== "0x0000000000000000000000000000000000000000") {
     path = [data.address1, data.address2];
   } else {
+    // Make an indirect swap from token a to token b via WETH
     path = [
       data.address1,
       "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
@@ -51,14 +54,17 @@ app.post("/swap", async function (req, res) {
     ];
   }
   console.log("path", path);
+  // Deadline after 20 mintues
   const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
 
+  // Get a quote price for token A - token B swap
   const resp = await contractRouter.methods
     .getAmountsOut(amount.toString(), path)
     .call();
 
   console.log("resp", resp);
 
+  // Get data for the swap call
   const callData = await contractRouter.methods.swapExactTokensForTokens(
       amount.toString(),
       resp[2],
